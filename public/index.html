@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Real-time Polling & Chat App</title>
+</head>
+<body>
+    <div id="poll">
+        <h2>Poll</h2>
+        <button onclick="vote('option1')">Option 1</button>
+        <button onclick="vote('option2')">Option 2</button>
+        <div id="votes">
+            Votes for Option 1: <span id="option1-votes">0</span><br>
+            Votes for Option 2: <span id="option2-votes">0</span>
+        </div>
+    </div>
+
+    <div id="chat">
+        <h2>Chat</h2>
+        <ul id="messages"></ul>
+        <input id="messageInput" autocomplete="off">
+        <button onclick="sendMessage()">Send</button>
+    </div>
+
+    <script>
+        function updatePoll() {
+            fetch('/api/poll')
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('option1-votes').innerText = data.votes.option1;
+                    document.getElementById('option2-votes').innerText = data.votes.option2;
+                })
+                .catch(error => console.error('Error updating poll:', error));
+        }
+
+        function vote(option) {
+            fetch('/api/vote', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ option }),
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        updatePoll();
+                    }
+                })
+                .catch(error => console.error('Error voting:', error));
+        }
+
+        function updateChat() {
+            fetch('/api/chat')
+                .then(response => response.json())
+                .then(data => {
+                    const messagesElement = document.getElementById('messages');
+                    messagesElement.innerHTML = '';
+                    data.messages.forEach(message => {
+                        const li = document.createElement('li');
+                        li.appendChild(document.createTextNode(message));
+                        messagesElement.appendChild(li);
+                    });
+                })
+                .catch(error => console.error('Error updating chat:', error));
+        }
+
+        function sendMessage() {
+            const messageInput = document.getElementById('messageInput');
+            const message = messageInput.value.trim();
+            if (message !== '') {
+                fetch('/api/chat', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ message }),
+                })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            updateChat();
+                        }
+                    })
+                    .catch(error => console.error('Error sending message:', error));
+
+                messageInput.value = '';
+            }
+        }
+
+        updatePoll();
+        updateChat();
+
+        setInterval(() => {
+            updatePoll();
+            updateChat();
+        }, 5000);
+    </script>
+</body>
+</html>
